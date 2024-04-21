@@ -1,0 +1,2 @@
+# Butterbot
+funny discord bot
