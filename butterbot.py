@@ -227,7 +227,7 @@ async def on_command_error(ctx, error):
             minutes, seconds = divmod(remainingTime.seconds, 60)
             await ctx.send(f"Immer mit der Ruhe du kleiner Pisser. In {minutes}min {seconds}s kannste wieder")
         elif ctx.invoked_with == "otz":
-                remainingTime = timedelta(hours=1) - (datetime.now() - userOtzAttempts.get(ctx.author.id)) 
+                remainingTime = timedelta(hours=1) - (datetime.now() - userOtzAttempts.get(ctx.author.id)[-1]) 
                 minutes, seconds = divmod(remainingTime.seconds, 60)
                 await ctx.send(f"Deine mom is ne otze, otz in {minutes}min {seconds}s wieder")
         else:
@@ -270,6 +270,7 @@ async def otz_command(ctx, userNum: int = None):
         if userCooldowns.get(userID) != None:
             userCooldowns.pop(userID)
         await ctx.send("Gewinne Gewinne Gewinne! Dein !machwas cooldown wurde zurückgesetzt.")
+        userOtzAttempts.pop(userID)
     elif abs(botNum - userNum) == 1:
         await ctx.send("1 Unterschied, darfst nochmal :)")
         removeLastOtzAttempt(userID)
