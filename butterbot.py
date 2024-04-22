@@ -47,7 +47,7 @@ async def channelInteraction():
 
     # bot ist schon irgendwo drin
     if bot.voice_clients[0].channel != bot.guilds[0].get_channel(1136646942101880882): 
-        if random.random() < 0.4:
+        if random.random() < 0.1:
             print("Verlasse Channel")
             await bot.voice_clients[0].move_to(bot.guilds[0].afk_channel)
             return
@@ -71,8 +71,8 @@ async def soundInteraction():
         return
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         return
-    if bot.voice_clients[0].is_playing():
-        return
+    while bot.voice_clients[0].is_playing():
+        asyncio.sleep(1)
     
     soundboard = [f"{os.getcwd()}\\sounds\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\sounds") if os.path.splitext(dir)[1] == ".mp3"]
 
@@ -94,8 +94,7 @@ async def soundInteraction():
 
 @bot.command(name='hilfe')
 async def funnyPost_command(ctx):
-    help_msg = "Butter Butter Butter hinter dir Butter"
-    await ctx.send(help_msg)
+    await ctx.send("Butter Butter Butter hinter dir Butter")
 
 @bot.command(name='help')
 async def help_command(ctx):
@@ -210,6 +209,8 @@ async def makeSound_command(ctx):
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         await ctx.send("Bin im afk channel da darf ich nix")
         return
+    while bot.voice_clients[0].is_playing():
+        asyncio.sleep(1)
     
     soundboard = [f"{os.getcwd()}\\sounds\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\sounds") if os.path.splitext(dir)[1] == ".mp3"]
     sound = random.choice(soundboard)
@@ -236,6 +237,8 @@ async def on_command_error(ctx, error):
         await ctx.send(f"```{error}``` kenn ich ni")
     elif isinstance(error, commands.BadArgument):
         await ctx.send(f"{ctx.author.display_name}, ich hoffe du kriegst Husten")
+    elif isinstance(error, discord.ClientException):
+        await ctx.send("kann nur einen sound auf einmal abspielen sorry")
     else:
         await ctx.send("Irgendwas is passiert, Olli bescheid sagen (╯°□°）╯︵ ┻━┻")
         print(ctx)
@@ -245,7 +248,6 @@ async def on_command_error(ctx, error):
 @tasks.loop(seconds=5)
 async def maintainConnection():
     try:
-        #print(f"Channel: {bot.voice_clients[0].channel}")
         test = bot.voice_clients[0].channel
     except IndexError:
         await bot.guilds[0].afk_channel.connect(reconnect=True)
@@ -272,7 +274,7 @@ async def otz_command(ctx, userNum: int = None):
         await ctx.send("Gewinne Gewinne Gewinne! Dein !machwas cooldown wurde zurückgesetzt.")
         userOtzAttempts.pop(userID)
     elif abs(botNum - userNum) == 1:
-        await ctx.send("1 Unterschied, darfst nochmal :)")
+        await ctx.send(f"{botNum}, darfst nochmal :)")
         removeLastOtzAttempt(userID)
     else:
         await ctx.send(f"Es war {botNum} lol. Womp Womp :(")
