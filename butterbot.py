@@ -4,12 +4,14 @@ import os
 import asyncio
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta
+from collections import deque
 
 intent = discord.Intents.all()
 intent.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intent, help_command=None)
 
 userCooldowns = {}
+userOzAttempts = {}
 
 @bot.event
 async def on_ready():
@@ -151,7 +153,7 @@ async def attemptStopSound_command(ctx):
     else:
         await ctx.send("Es läuft kein sound was willst du von mir")
 
-def isUserAllowed(ctx):
+def isUserAllowed(ctx) -> bool:
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         return True
 
@@ -169,6 +171,39 @@ def isUserAllowed(ctx):
         return True
     else:
         return False
+
+def checkOzAttempts(ctx) -> bool:
+    userID = ctx.author.id
+    if userOzAttempts.get(userID) == None:
+        userOzAttempts[userID] = deque([datetime.now(), None, None])
+        return True
+
+    lastDate = None
+    for item in reversed(userOzAttempts[userID]):
+        if item != None:
+            lastDate = item
+            break
+    
+    timeDiff = datetime.now() - lastDate
+    if timeDiff < timedelta(hours=1):
+        return False
+    else:
+        userOzAttempts[userID].rotate(1)
+        userOzAttempts[userID][0] = datetime.now()
+        return True
+
+def removeLastOzAttempt(userId: int):
+    if userOzAttempts.get(userId) == None:
+        return
+    
+    if userCooldowns[userId][1] == None:
+        userOzAttempts.pop(userId)
+        return
+    
+    for i in reversed(range(len(userOzAttempts))):
+        if userOzAttempts[i] != None:
+            userOzAttempts[i] = None
+            break
 
 @bot.command(name='machjetzt', aliases=['machwas'])
 @commands.check(isUserAllowed)
@@ -194,6 +229,15 @@ async def on_command_error(ctx, error):
             remainingTime = timedelta(minutes=60) - (datetime.now() - userCooldowns.get(ctx.author.id))
             minutes, seconds = divmod(remainingTime.seconds, 60)
             await ctx.send(f"Immer mit der Ruhe du kleiner Pisser. In {minutes}min {seconds}s kannste wieder")
+        elif ctx.invoked_with == "oz":
+                lastDate = None
+                for item in reversed(userOzAttempts.get(ctx.author.id)):
+                    if item != None:
+                        lastDate = item
+                        break
+                remainingTime = timedelta(hours=1) - (datetime.now() - lastDate) 
+                minutes, seconds = divmod(remainingTime.seconds, 60)
+                await ctx.send(f"Deine mom is ne otze, otz in {minutes}min {seconds}s wieder")
         else:
             await ctx.send("Das darfst du leider nicht :(")
     elif isinstance(error, commands.CommandNotFound):
@@ -214,16 +258,26 @@ async def maintainConnection():
         print("reconnected")
 
 @bot.command(name="oz")
-async def oz_command(ctx, userNum: int):
+@commands.check(checkOzAttempts)
+async def oz_command(ctx, userNum: int = None):
+    userID = ctx.author.id
+    if userNum == None:
+        await ctx.send("ja was??")
+        removeLastOzAttempt(userID)
+        return
+    
+    if not (1 <= userNum <= 20):
+        await ctx.send("Du musst ne zahl zwischen 1 und 20 sagen.")
+        removeLastOzAttempt(userID)
+        return
+    
     botNum = random.randint(1, 20)
     if botNum == userNum:
-        if userCooldowns.get(ctx.author.id) != None:
-            userCooldowns.pop(ctx.author.id)
+        if userCooldowns.get(userID) != None:
+            userCooldowns.pop(userID)
         await ctx.send("Gewinne Gewinne Gewinne! Dein !machwas cooldown wurde zurückgesetzt. :)")
     else:
-        await ctx.send(f"Butter: {botNum}")
-        await ctx.send("Womp Womp :(")
-    # TODO Add !oz player limit 
+        await ctx.send(f"Es war {botNum} lol. Womp Womp :(")
 
 # bot starten
 with open("token.txt") as h:
