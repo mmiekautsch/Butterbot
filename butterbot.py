@@ -213,6 +213,18 @@ async def maintainConnection():
         await bot.guilds[0].afk_channel.connect(reconnect=True)
         print("reconnected")
 
+@bot.command(name="oz")
+async def oz_command(ctx, userNum: int):
+    botNum = random.randint(1, 20)
+    if botNum == userNum:
+        if userCooldowns.get(ctx.author.id) != None:
+            userCooldowns.pop(ctx.author.id)
+        await ctx.send("Gewinne Gewinne Gewinne! Dein !machwas cooldown wurde zurückgesetzt. :)")
+    else:
+        await ctx.send(f"Butter: {botNum}")
+        await ctx.send("Womp Womp :(")
+    # TODO Add !oz player limit 
+
 # bot starten
 with open("token.txt") as h:
     bot.run(h.readline())
