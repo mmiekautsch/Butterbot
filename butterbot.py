@@ -8,7 +8,7 @@ from collections import deque
 
 intent = discord.Intents.all()
 intent.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intent, help_command=None)
+bot = commands.Bot(command_prefix="!", intents=intent, help_command=None, case_insensitive=True)
 
 userCooldowns = {}
 userOtzAttempts = {}
@@ -17,6 +17,7 @@ userOtzAttempts = {}
 async def on_ready():
     await bot.guilds[0].afk_channel.connect(reconnect=True)
     await bot.guilds[0].get_channel(1208189932770959400).send("Butter is back online bitches")
+    await bot.change_presence(activity=discord.Game("dumme scheiße ab"))
 
     channelInteraction.start()
     soundInteraction.start()
@@ -72,9 +73,10 @@ async def soundInteraction():
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         return
     while bot.voice_clients[0].is_playing():
-        asyncio.sleep(1)
+        await asyncio.sleep(10)
     
     soundboard = [f"{os.getcwd()}\\sounds\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\sounds") if os.path.splitext(dir)[1] == ".mp3"]
+    soundboard += [f"{os.getcwd()}\\music\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\music") if os.path.splitext(dir)[1] == ".mp3"]
 
     num = random.random()
     if num < 0.5:
@@ -141,7 +143,7 @@ async def requestJoin_command(ctx):
     await bot.voice_clients[0].move_to(userChannel.channel)
 
     
-@bot.command(name='butterbitte', aliases=['ButterBitte', 'bittebutter', 'BitterButter'])
+@bot.command(name='butterbitte')
 async def attemptStopSound_command(ctx):
     if bot.voice_clients[0].is_playing():
         if random.random() < 0.35:
@@ -213,6 +215,7 @@ async def makeSound_command(ctx):
         asyncio.sleep(1)
     
     soundboard = [f"{os.getcwd()}\\sounds\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\sounds") if os.path.splitext(dir)[1] == ".mp3"]
+    soundboard += [f"{os.getcwd()}\\music\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\music") if os.path.splitext(dir)[1] == ".mp3"]
     sound = random.choice(soundboard)
     print(f"\r\nSelected Sound: {sound}\r\n")
     await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
@@ -223,7 +226,7 @@ async def makeSound_command(ctx):
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        if ctx.invoked_with == "machjetzt" or ctx.invoked_with == "machwas":
+        if ctx.invoked_with in ["machjetzt", "machwas", "singwas", "sagwas"]:
             remainingTime = timedelta(minutes=60) - (datetime.now() - userCooldowns.get(ctx.author.id))
             minutes, seconds = divmod(remainingTime.seconds, 60)
             await ctx.send(f"Immer mit der Ruhe du kleiner Pisser. In {minutes}min {seconds}s kannste wieder")
@@ -278,6 +281,46 @@ async def otz_command(ctx, userNum: int = None):
         removeLastOtzAttempt(userID)
     else:
         await ctx.send(f"Es war {botNum} lol. Womp Womp :(")
+
+@bot.command(name="sagwas")
+@commands.check(isUserAllowed)
+async def onlysounds_command(ctx):
+    if not bot.voice_clients:
+        return
+    if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
+        await ctx.send("Bin im afk channel da darf ich nix")
+        return
+    while bot.voice_clients[0].is_playing():
+        asyncio.sleep(1)
+    
+    soundboard = [f"{os.getcwd()}\\sounds\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\sounds") if os.path.splitext(dir)[1] == ".mp3"]
+    
+    sound = random.choice(soundboard)
+    print(f"\r\nSelected Sound: {sound}\r\n")
+    await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
+    bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
+    while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
+        await asyncio.sleep(10)
+
+@bot.command(name="singwas")
+@commands.check(isUserAllowed)
+async def onlymusic_command(ctx):
+    if not bot.voice_clients:
+        return
+    if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
+        await ctx.send("Bin im afk channel da darf ich nix")
+        return
+    while bot.voice_clients[0].is_playing():
+        asyncio.sleep(10)
+    
+    soundboard = [f"{os.getcwd()}\\music\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\music") if os.path.splitext(dir)[1] == ".mp3"]
+    
+    sound = random.choice(soundboard)
+    print(f"\r\nSelected Sound: {sound}\r\n")
+    await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
+    bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
+    while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
+        await asyncio.sleep(1)
 
 # bot starten
 with open("token.txt") as h:
