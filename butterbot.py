@@ -158,8 +158,8 @@ def isUserAllowed(ctx) -> bool:
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         return True
 
-    if ctx.author.id == 202861899098882048: # olli darf das :)
-        return True
+    #if ctx.author.id == 202861899098882048: # olli darf das :)
+    #    return True
     
     usercd = userCooldowns.get(ctx.author.id)
     if usercd is None:
