@@ -12,6 +12,7 @@ bot = commands.Bot(command_prefix="!", intents=intent, help_command=None, case_i
 
 userCooldowns = {}
 userOtzAttempts = {}
+standby = False
 
 @bot.event
 async def on_ready():
@@ -33,17 +34,21 @@ async def on_disconnect():
 
 @tasks.loop(minutes=5)
 async def channelInteraction():
+    if not bot.voice_clients:
+        return
+    
     # generiere liste aller channels mit leuten drin
     occupiedChannels = []
     for voice_channel in bot.guilds[0].voice_channels:
         if voice_channel.id == bot.guilds[0].afk_channel.id:
             continue
-        if voice_channel.members:
+        if voice_channel.members and not all(member == bot.user for member in voice_channel.members):
             occupiedChannels.append(voice_channel)
         
     if not occupiedChannels:
         print("Keine Channel mit Leuten gefunden")
-        await bot.voice_clients[0].move_to(bot.guilds[0].afk_channel)
+        if bot.voice_clients[0].channel != bot.guilds[0].afk_channel:
+            await bot.voice_clients[0].move_to(bot.guilds[0].afk_channel)
         return
 
     # bot ist schon irgendwo drin
@@ -73,7 +78,7 @@ async def soundInteraction():
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         return
     while bot.voice_clients[0].is_playing():
-        await asyncio.sleep(10)
+        await asyncio.sleep(1)
     
     soundboard = [f"{os.getcwd()}\\sounds\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\sounds") if os.path.splitext(dir)[1] == ".mp3"]
     soundboard += [f"{os.getcwd()}\\music\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\music") if os.path.splitext(dir)[1] == ".mp3"]
@@ -153,6 +158,9 @@ async def attemptStopSound_command(ctx):
             await ctx.send("Frag doch einfach noch mal :)")
     else:
         await ctx.send("Es läuft kein sound was willst du von mir")
+
+def isUserAdmin(ctx) -> bool:
+    return ctx.author.id == 202861899098882048
 
 def isUserAllowed(ctx) -> bool:
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
@@ -291,7 +299,7 @@ async def onlysounds_command(ctx):
         await ctx.send("Bin im afk channel da darf ich nix")
         return
     while bot.voice_clients[0].is_playing():
-        asyncio.sleep(1)
+        await asyncio.sleep(1)
     
     soundboard = [f"{os.getcwd()}\\sounds\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\sounds") if os.path.splitext(dir)[1] == ".mp3"]
     
@@ -300,7 +308,7 @@ async def onlysounds_command(ctx):
     await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
     bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
     while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
-        await asyncio.sleep(10)
+        await asyncio.sleep(1)
 
 @bot.command(name="singwas")
 @commands.check(isUserAllowed)
@@ -311,7 +319,7 @@ async def onlymusic_command(ctx):
         await ctx.send("Bin im afk channel da darf ich nix")
         return
     while bot.voice_clients[0].is_playing():
-        asyncio.sleep(10)
+        await asyncio.sleep(1)
     
     soundboard = [f"{os.getcwd()}\\music\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\music") if os.path.splitext(dir)[1] == ".mp3"]
     
@@ -321,6 +329,50 @@ async def onlymusic_command(ctx):
     bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
     while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
         await asyncio.sleep(1)
+
+@bot.command(name="standby")
+@commands.check(isUserAdmin)
+async def standby_command(ctx):
+    global standby
+    if not bot.voice_clients:
+        return
+    while bot.voice_clients[0].is_playing():
+        await asyncio.sleep(1)
+
+    if standby:
+        await ctx.send("bin schon im standby")
+        return
+
+    channelInteraction.cancel()
+    soundInteraction.cancel()
+
+    while channelInteraction.is_running() or soundInteraction.is_running():
+        await asyncio.sleep(0.5)
+    standby = True
+
+    if bot.voice_clients[0].channel != bot.guilds[0].afk_channel:
+        await bot.voice_clients[0].move_to(bot.guilds[0].afk_channel)
+
+    await ctx.send("ok")
+
+@bot.command(name="wakeup")
+@commands.check(isUserAdmin)
+async def standby_command(ctx):
+    global standby
+    if not bot.voice_clients:
+        return
+    while bot.voice_clients[0].is_playing():
+        await asyncio.sleep(1)
+
+    if not standby:
+        await ctx.send("ich bin nicht im standby was willst du")
+        return
+
+    channelInteraction.start()
+    soundInteraction.start()
+    standby = False
+
+    await ctx.send("ok")
 
 # bot starten
 with open("token.txt") as h:
