@@ -219,8 +219,8 @@ async def makeSound_command(ctx):
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         await ctx.send("Bin im afk channel da darf ich nix")
         return
-    while bot.voice_clients[0].is_playing():
-        asyncio.sleep(1)
+    if bot.voice_clients[0].is_playing():
+        await ctx.send("ich mach grad schon was")
     
     soundboard = [f"{os.getcwd()}\\sounds\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\sounds") if os.path.splitext(dir)[1] == ".mp3"]
     soundboard += [f"{os.getcwd()}\\music\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\music") if os.path.splitext(dir)[1] == ".mp3"]
@@ -298,8 +298,8 @@ async def onlysounds_command(ctx):
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         await ctx.send("Bin im afk channel da darf ich nix")
         return
-    while bot.voice_clients[0].is_playing():
-        await asyncio.sleep(1)
+    if bot.voice_clients[0].is_playing():
+        await ctx.send("ich sag grad schon was")
     
     soundboard = [f"{os.getcwd()}\\sounds\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\sounds") if os.path.splitext(dir)[1] == ".mp3"]
     
@@ -318,8 +318,8 @@ async def onlymusic_command(ctx):
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         await ctx.send("Bin im afk channel da darf ich nix")
         return
-    while bot.voice_clients[0].is_playing():
-        await asyncio.sleep(1)
+    if bot.voice_clients[0].is_playing():
+        await ctx.send("ich sing grad schon was")
     
     soundboard = [f"{os.getcwd()}\\music\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\music") if os.path.splitext(dir)[1] == ".mp3"]
     
@@ -336,8 +336,8 @@ async def standby_command(ctx):
     global standby
     if not bot.voice_clients:
         return
-    while bot.voice_clients[0].is_playing():
-        await asyncio.sleep(1)
+    if bot.voice_clients[0].is_playing():
+        ctx.send("ich mach grad was, moment")
 
     if standby:
         await ctx.send("bin schon im standby")
@@ -361,8 +361,8 @@ async def standby_command(ctx):
     global standby
     if not bot.voice_clients:
         return
-    while bot.voice_clients[0].is_playing():
-        await asyncio.sleep(1)
+    if bot.voice_clients[0].is_playing():
+        ctx.send("ich mach grad was, moment")
 
     if not standby:
         await ctx.send("ich bin nicht im standby was willst du")
