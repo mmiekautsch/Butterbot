@@ -12,6 +12,7 @@ bot = commands.Bot(command_prefix="!", intents=intent, help_command=None, case_i
 
 userCooldowns = {}
 userOtzAttempts = {}
+admins = [202861899098882048, 769230869373124638]
 standby = False
 
 @bot.event
@@ -160,13 +161,13 @@ async def attemptStopSound_command(ctx):
         await ctx.send("Es läuft kein sound was willst du von mir")
 
 def isUserAdmin(ctx) -> bool:
-    return ctx.author.id == 202861899098882048
+    return ctx.author.id in admins
 
 def isUserAllowed(ctx) -> bool:
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         return True
 
-    #if ctx.author.id == 202861899098882048: # olli darf das :)
+    #if ctx.author.id in admin:
     #    return True
     
     usercd = userCooldowns.get(ctx.author.id)
