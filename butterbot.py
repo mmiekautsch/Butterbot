@@ -25,7 +25,7 @@ async def logAsync():
     
     try:
         with open(logfile, 'a') as f:
-            f.write(f"[{datetime.now().strftime("%Y-%m-%d %H-%M-%S")}] {messageQueue.get()}\r\n")
+            f.write(f"[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {messageQueue.get()}\n")
             messageQueue.task_done()
     except:
         return
@@ -54,6 +54,11 @@ async def on_disconnect():
 
 @tasks.loop(minutes=5)
 async def channelInteraction():
+    messageQueue.put("ChannelInteraction")
+    if bot.voice_clients[0].is_playing():
+        messageQueue.put("already playing sound")
+        return
+
     if not bot.voice_clients:
         return
     
@@ -98,15 +103,16 @@ async def channelInteraction():
  
 @tasks.loop(seconds=30)
 async def soundInteraction():
+    messageQueue.put("SoundInteraction")
     if not bot.voice_clients:
         messageQueue.put("No Connections")
         return
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         messageQueue.put("Not doing anything, in AFK Channel")
         return
-    while bot.voice_clients[0].is_playing():
-        messageQueue.put("Waiting for sound to stop playing")
-        await asyncio.sleep(1)
+    if bot.voice_clients[0].is_playing():
+        messageQueue.put("already playing sound")
+        return
     
     soundboard = [f"{os.getcwd()}\\sounds\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\sounds") if os.path.splitext(dir)[1] == ".mp3"]
     soundboard += [f"{os.getcwd()}\\music\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\music") if os.path.splitext(dir)[1] == ".mp3"]
@@ -160,9 +166,10 @@ Zeigt diese Hilfe an
 
 @bot.command(name='butter', aliases=['kommher', 'bielebiele'])
 async def requestJoin_command(ctx):
+    messageQueue.put("requestJoin")
     if bot.voice_clients and bot.voice_clients[0].is_playing():
         await ctx.send("Bin beschäftigt")
-        messageQueue.put("Waiting for sound to stop playing")
+        messageQueue.put("playing sound, aborting")
         return
 
     userChannel = ctx.author.voice
@@ -250,6 +257,7 @@ def removeLastOtzAttempt(userId: int):
 @bot.command(name='machjetzt', aliases=['machwas'])
 @commands.check(isUserAllowed)
 async def makeSound_command(ctx):
+    messageQueue.put("makeSound")
     if not bot.voice_clients:
         return
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
@@ -257,7 +265,9 @@ async def makeSound_command(ctx):
         messageQueue.put(f"In channel: {bot.voice_clients[0].channel}")
         return
     if bot.voice_clients[0].is_playing():
+        messageQueue.put("playing sound, aborting")
         await ctx.send("ich mach grad schon was")
+        return
     
     soundboard = [f"{os.getcwd()}\\sounds\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\sounds") if os.path.splitext(dir)[1] == ".mp3"]
     soundboard += [f"{os.getcwd()}\\music\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\music") if os.path.splitext(dir)[1] == ".mp3"]
