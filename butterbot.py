@@ -40,6 +40,7 @@ async def on_ready():
     channelInteraction.start()
     soundInteraction.start()
     maintainConnection.start()
+    logAsync.start()
 
 @bot.event
 async def on_disconnect():
