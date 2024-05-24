@@ -5,6 +5,7 @@ import asyncio
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta
 from collections import deque
+from queue import Queue
 
 intent = discord.Intents.all()
 intent.message_content = True
@@ -14,12 +15,27 @@ userCooldowns = {}
 userOtzAttempts = {}
 admins = [202861899098882048, 769230869373124638]
 standby = False
+messageQueue = Queue()
+logfile = f"log_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.txt"
+
+@tasks.loop(seconds=1)
+async def logAsync():
+    if messageQueue.empty():
+        return
+    
+    try:
+        with open(logfile, 'a') as f:
+            f.write(f"[{datetime.now().strftime("%Y-%m-%d %H-%M-%S")}] {messageQueue.get()}\r\n")
+            messageQueue.task_done()
+    except:
+        return
 
 @bot.event
 async def on_ready():
     await bot.guilds[0].afk_channel.connect(reconnect=True)
     await bot.guilds[0].get_channel(1208189932770959400).send("Butter is back online bitches")
     await bot.change_presence(activity=discord.Game("dumme scheiße ab"))
+    messageQueue.put("Connected successfully")
 
     channelInteraction.start()
     soundInteraction.start()
@@ -30,8 +46,10 @@ async def on_disconnect():
     try:
         for vc in bot.voice_clients:
             await vc.disconnect()
+            messageQueue.put("Reconnected")
     except:
         print("disconnect verkackt")
+        messageQueue.put("Reconnect failed")
 
 @tasks.loop(minutes=5)
 async def channelInteraction():
@@ -50,6 +68,7 @@ async def channelInteraction():
         print("Keine Channel mit Leuten gefunden")
         if bot.voice_clients[0].channel != bot.guilds[0].afk_channel:
             await bot.voice_clients[0].move_to(bot.guilds[0].afk_channel)
+            messageQueue.put("Moving to AFK Channel")
         return
 
     # bot ist schon irgendwo drin
@@ -57,28 +76,35 @@ async def channelInteraction():
         if random.random() < 0.1:
             print("Verlasse Channel")
             await bot.voice_clients[0].move_to(bot.guilds[0].afk_channel)
+            messageQueue.put("Leaving channel")
             return
         elif random.random() < 0.4 and len(occupiedChannels) > 1:
             choice = random.choice(occupiedChannels)
             print(f"Trete anderem Channel bei: {choice}")
             await bot.voice_clients[0].move_to(choice)
+            messageQueue.put(f"Joining different channel: {choice}")
             return
 
     if random.random() < 0.6:
         choice = random.choice(occupiedChannels)
         print(f"Trete Channel bei: {choice}")
         await bot.voice_clients[0].move_to(choice)
+        messageQueue.put(f"Joining channel: {choice}")
         return
     
     print("Mache nix, schlecht gewürfelt")
+    messageQueue.put("Bad roll, not doing anything")
  
 @tasks.loop(seconds=30)
 async def soundInteraction():
     if not bot.voice_clients:
+        messageQueue.put("No Connections")
         return
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
+        messageQueue.put("Not doing anything, in AFK Channel")
         return
     while bot.voice_clients[0].is_playing():
+        messageQueue.put("Waiting for sound to stop playing")
         await asyncio.sleep(1)
     
     soundboard = [f"{os.getcwd()}\\sounds\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\sounds") if os.path.splitext(dir)[1] == ".mp3"]
@@ -89,14 +115,17 @@ async def soundInteraction():
         sound = random.choice(soundboard)
         print(f"\r\nSelected Sound: {sound}\r\n")
         await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
+        messageQueue.put(f"Playing sound: {os.path.basename(sound)[:-4]}")
         bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
         while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
             await asyncio.sleep(1)
     else:
         print(f"Kein Sound, schlecht gewürfelt ({num})")
+        messageQueue.put("Bad roll, not playing anything")
 
     newinterval = random.randint(5, 1800) 
     print(f"New Soundboard Interval: {newinterval}s, next sound at {(datetime.now() + timedelta(seconds=newinterval)).strftime('%H:%M:%S')}")
+    messageQueue.put(f"New Soundboard Interval: {newinterval}s, next sound at {(datetime.now() + timedelta(seconds=newinterval)).strftime('%H:%M:%S')}")
     soundInteraction.change_interval(seconds=newinterval)
 
 
@@ -132,6 +161,7 @@ Zeigt diese Hilfe an
 async def requestJoin_command(ctx):
     if bot.voice_clients and bot.voice_clients[0].is_playing():
         await ctx.send("Bin beschäftigt")
+        messageQueue.put("Waiting for sound to stop playing")
         return
 
     userChannel = ctx.author.voice
@@ -147,6 +177,7 @@ async def requestJoin_command(ctx):
         return
 
     await bot.voice_clients[0].move_to(userChannel.channel)
+    messageQueue.put(f"Joining channel: {userChannel.channel}")
 
     
 @bot.command(name='butterbitte')
@@ -155,10 +186,13 @@ async def attemptStopSound_command(ctx):
         if random.random() < 0.35:
             await ctx.send("Butter erhört dein Leiden.")
             bot.voice_clients[0].stop()
+            messageQueue.put("Stop requested, stopped playing sound")
         else:
             await ctx.send("Frag doch einfach noch mal :)")
+            messageQueue.put("Stop requested, did not stop playing sound")
     else:
         await ctx.send("Es läuft kein sound was willst du von mir")
+        messageQueue.put("Stop requested, no sound was playing")
 
 def isUserAdmin(ctx) -> bool:
     return ctx.author.id in admins
@@ -219,6 +253,7 @@ async def makeSound_command(ctx):
         return
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         await ctx.send("Bin im afk channel da darf ich nix")
+        messageQueue.put(f"In channel: {bot.voice_clients[0].channel}")
         return
     if bot.voice_clients[0].is_playing():
         await ctx.send("ich mach grad schon was")
@@ -228,6 +263,7 @@ async def makeSound_command(ctx):
     sound = random.choice(soundboard)
     print(f"\r\nSelected Sound: {sound}\r\n")
     await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
+    messageQueue.put(f"Playing sound: {os.path.basename(sound)[:-4]}")
     bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
     while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
         await asyncio.sleep(1)
@@ -263,13 +299,16 @@ async def maintainConnection():
         test = bot.voice_clients[0].channel
     except IndexError:
         await bot.guilds[0].afk_channel.connect(reconnect=True)
+        messageQueue.put("Reconnected")
         print("reconnected")
 
 @bot.command(name="otz")
 @commands.check(checkOtzAttempts)
 async def otz_command(ctx, userNum: int = None):
+    messageQueue.put("otz")
     userID = ctx.author.id
     if userNum == None:
+        messageQueue.put("no args")
         await ctx.send("ja was??")
         removeLastOtzAttempt(userID)
         return
@@ -285,15 +324,19 @@ async def otz_command(ctx, userNum: int = None):
             userCooldowns.pop(userID)
         await ctx.send("Gewinne Gewinne Gewinne! Dein !machwas cooldown wurde zurückgesetzt.")
         userOtzAttempts.pop(userID)
+        messageQueue.put(f"success, reducing cooldown of {ctx.author.display_name}")
     elif abs(botNum - userNum) == 1:
         await ctx.send(f"{botNum}, darfst nochmal :)")
+        messageQueue.put(f"{ctx.author.display_name} was one off, free try")
         removeLastOtzAttempt(userID)
     else:
         await ctx.send(f"Es war {botNum} lol. Womp Womp :(")
+        messageQueue.put(f"{ctx.author.display_name} failed")
 
 @bot.command(name="sagwas")
 @commands.check(isUserAllowed)
 async def onlysounds_command(ctx):
+    messageQueue.put("singwas")
     if not bot.voice_clients:
         return
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
@@ -308,12 +351,14 @@ async def onlysounds_command(ctx):
     print(f"\r\nSelected Sound: {sound}\r\n")
     await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
     bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
+    messageQueue.put(f"playing {os.path.basename(sound)[:-4]}")
     while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
         await asyncio.sleep(1)
 
 @bot.command(name="singwas")
 @commands.check(isUserAllowed)
 async def onlymusic_command(ctx):
+    messageQueue.put("singwas")
     if not bot.voice_clients:
         return
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
@@ -328,6 +373,7 @@ async def onlymusic_command(ctx):
     print(f"\r\nSelected Sound: {sound}\r\n")
     await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
     bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
+    messageQueue.put(f"playing {os.path.basename(sound)[:-4]}")
     while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
         await asyncio.sleep(1)
 
@@ -355,6 +401,7 @@ async def standby_command(ctx):
         await bot.voice_clients[0].move_to(bot.guilds[0].afk_channel)
 
     await ctx.send("ok")
+    messageQueue.put("standby")
 
 @bot.command(name="wakeup")
 @commands.check(isUserAdmin)
@@ -373,7 +420,11 @@ async def standby_command(ctx):
     soundInteraction.start()
     standby = False
 
-    await ctx.send("ok")
+    with open(os.getcwd() + "/wakeup.gif", 'rb') as image_file:
+        image = discord.File(image_file)
+        await ctx.send(file=image)
+
+    messageQueue.put("wakeup")
 
 # bot starten
 with open("token.txt") as h:
