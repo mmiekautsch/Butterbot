@@ -438,11 +438,14 @@ async def standby_command(ctx):
 
     messageQueue.put("wakeup")
 
-@bot.command(name="reboot", aliases=['restart'])
+@bot.command(name="reboot", aliases=['restart', 'lüge'])
 @commands.check(isUserAdmin)
 async def reboot_command(ctx):
     messageQueue.put("rebooting")
-    await ctx.send("starte neu...")
+    if ctx.invoked_with == "lüge":
+        await ctx.send("hast recht, komme gleich wieder...")
+    else:
+        await ctx.send("starte neu...")
     await bot.close()
     os.execv(sys.executable, ['python'] + sys.argv)
 
