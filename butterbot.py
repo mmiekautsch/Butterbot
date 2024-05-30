@@ -17,7 +17,7 @@ userOtzAttempts = {}
 admins = [202861899098882048, 769230869373124638]
 standby = False
 messageQueue = Queue()
-logfile = f"log_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.txt"
+logfile = f"./logs/log_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.txt"
 
 @tasks.loop(seconds=1)
 async def logAsync():
