@@ -1,6 +1,7 @@
 import discord
 import random
 import os
+import sys
 import asyncio
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta
@@ -436,6 +437,21 @@ async def standby_command(ctx):
         await ctx.send(file=image)
 
     messageQueue.put("wakeup")
+
+@bot.command(name="reboot", aliases=['restart'])
+@commands.check(isUserAdmin)
+async def reboot_command(ctx):
+    messageQueue.put("rebooting")
+    await ctx.send("starte neu...")
+    await bot.close()
+    os.execv(sys.executable, ['python'] + sys.argv)
+
+@bot.command(name="shutdown", aliases=['kill'])
+@commands.check(isUserAdmin)
+async def shutdown_command(ctx):
+    messageQueue.put("shutting down")
+    await ctx.send("aus die maus, ich bin jetzt raus")
+    await bot.close()
 
 # bot starten
 with open("token.txt") as h:
