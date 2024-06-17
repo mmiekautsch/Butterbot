@@ -19,6 +19,8 @@ userCooldowns = {}
 userOtzAttempts = {}
 admins = [202861899098882048, 769230869373124638]
 standby = False
+machwasCD = 30
+otzCD = 60
 
 dtoken = ""
 with open("token.txt") as h:
@@ -190,7 +192,7 @@ def isUserAllowed(ctx) -> bool:
         return True
 
     delta = datetime.now() - usercd
-    if delta > timedelta(minutes=60):
+    if delta > timedelta(minutes=machwasCD):
         userCooldowns[ctx.author.id] = datetime.now()
         return True
     else:
@@ -209,7 +211,7 @@ def checkOtzAttempts(ctx) -> bool:
         return True
     
     timeDiff = datetime.now() - userOtzAttempts[userID][-1]
-    if timeDiff < timedelta(hours=1):
+    if timeDiff < timedelta(minutes=otzCD):
         return False
     else:
         userOtzAttempts[userID].rotate(1)
@@ -251,11 +253,11 @@ async def makeSound_command(ctx):
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
         if ctx.invoked_with in ["machjetzt", "machwas", "singwas", "sagwas"]:
-            remainingTime = timedelta(minutes=60) - (datetime.now() - userCooldowns.get(ctx.author.id))
+            remainingTime = timedelta(minutes=machwasCD) - (datetime.now() - userCooldowns.get(ctx.author.id))
             minutes, seconds = divmod(remainingTime.seconds, 60)
             await ctx.send(f"Immer mit der Ruhe du kleiner Pisser. In {minutes}min {seconds}s kannste wieder")
         elif ctx.invoked_with == "otz":
-                remainingTime = timedelta(hours=1) - (datetime.now() - userOtzAttempts.get(ctx.author.id)[-1]) 
+                remainingTime = timedelta(minutes=otzCD) - (datetime.now() - userOtzAttempts.get(ctx.author.id)[-1]) 
                 minutes, seconds = divmod(remainingTime.seconds, 60)
                 await ctx.send(f"Deine mom is ne otze, otz in {minutes}min {seconds}s wieder")
         else:
