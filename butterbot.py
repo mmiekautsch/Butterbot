@@ -1,4 +1,3 @@
-import sys
 import discord
 import random
 import os
@@ -19,6 +18,7 @@ userCooldowns = {}
 userOtzAttempts = {}
 admins = [202861899098882048, 769230869373124638]
 standby = False
+isplaying = False
 machwasCD = 30
 otzCD = 60
 
@@ -48,7 +48,7 @@ async def on_disconnect():
 
 @tasks.loop(minutes=5)
 async def channelInteraction():
-    if bot.voice_clients[0].is_playing():
+    if bot.voice_clients[0].is_playing() or isplaying:
         return
 
     if not bot.voice_clients:
@@ -90,11 +90,12 @@ async def channelInteraction():
  
 @tasks.loop(seconds=30)
 async def soundInteraction():
+    global isplaying
     if not bot.voice_clients:
         return
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         return
-    if bot.voice_clients[0].is_playing():
+    if bot.voice_clients[0].is_playing() or isplaying:
         return
     
     soundboard = [f"{os.getcwd()}\\sounds\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\sounds") if os.path.splitext(dir)[1] == ".mp3"]
@@ -105,9 +106,11 @@ async def soundInteraction():
         sound = random.choice(soundboard)
         print(f"\r\nSelected Sound: {sound}\r\n")
         await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
+        isplaying = True
         bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
-        while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
+        while bot.voice_clients[0].is_playing() or isplaying or bot.voice_clients[0].is_paused():
             await asyncio.sleep(1)
+        isplaying = False
     else:
         print(f"Kein Sound, schlecht gewürfelt ({num})")
 
@@ -146,7 +149,7 @@ Zeigt diese Hilfe an
 
 @bot.command(name='butter', aliases=['kommher', 'bielebiele'])
 async def requestJoin_command(ctx):
-    if bot.voice_clients and bot.voice_clients[0].is_playing():
+    if bot.voice_clients and bot.voice_clients[0].is_playing() or isplaying:
         await ctx.send("Bin beschäftigt")
         return
 
@@ -167,7 +170,7 @@ async def requestJoin_command(ctx):
     
 @bot.command(name='butterbitte')
 async def attemptStopSound_command(ctx):
-    if bot.voice_clients[0].is_playing():
+    if bot.voice_clients[0].is_playing() or isplaying:
         if random.random() < 0.35:
             await ctx.send("Butter erhört dein Leiden.")
             bot.voice_clients[0].stop()
@@ -231,12 +234,13 @@ def removeLastOtzAttempt(userId: int):
 @bot.command(name='machjetzt', aliases=['machwas'])
 @commands.check(isUserAllowed)
 async def makeSound_command(ctx):
+    global isplaying
     if not bot.voice_clients:
         return
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         await ctx.send("Bin im afk channel da darf ich nix")
         return
-    if bot.voice_clients[0].is_playing():
+    if bot.voice_clients[0].is_playing() or isplaying:
         await ctx.send("ich mach grad schon was")
         return
     
@@ -245,9 +249,11 @@ async def makeSound_command(ctx):
     sound = random.choice(soundboard)
     print(f"\r\nSelected Sound: {sound}\r\n")
     await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
+    isplaying = True
     bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
-    while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
+    while bot.voice_clients[0].is_playing() or isplaying or bot.voice_clients[0].is_paused():
         await asyncio.sleep(1)
+    isplaying = False
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -311,12 +317,13 @@ async def otz_command(ctx, userNum: int = None):
 @bot.command(name="sagwas")
 @commands.check(isUserAllowed)
 async def onlysounds_command(ctx):
+    global isplaying
     if not bot.voice_clients:
         return
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         await ctx.send("Bin im afk channel da darf ich nix")
         return
-    if bot.voice_clients[0].is_playing():
+    if bot.voice_clients[0].is_playing() or isplaying:
         await ctx.send("ich sag grad schon was")
     
     soundboard = [f"{os.getcwd()}\\sounds\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\sounds") if os.path.splitext(dir)[1] == ".mp3"]
@@ -324,19 +331,22 @@ async def onlysounds_command(ctx):
     sound = random.choice(soundboard)
     print(f"\r\nSelected Sound: {sound}\r\n")
     await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
+    isplaying = True
     bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
-    while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
+    while bot.voice_clients[0].is_playing() or isplaying or bot.voice_clients[0].is_paused():
         await asyncio.sleep(1)
+    isplaying = False
 
 @bot.command(name="singwas")
 @commands.check(isUserAllowed)
 async def onlymusic_command(ctx):
+    global isplaying
     if not bot.voice_clients:
         return
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         await ctx.send("Bin im afk channel da darf ich nix")
         return
-    if bot.voice_clients[0].is_playing():
+    if bot.voice_clients[0].is_playing() or isplaying:
         await ctx.send("ich sing grad schon was")
     
     soundboard = [f"{os.getcwd()}\\music\\{dir}" for dir in os.listdir(f"{os.getcwd()}\\music") if os.path.splitext(dir)[1] == ".mp3"]
@@ -344,9 +354,11 @@ async def onlymusic_command(ctx):
     sound = random.choice(soundboard)
     print(f"\r\nSelected Sound: {sound}\r\n")
     await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
+    isplaying = True
     bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
-    while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
+    while bot.voice_clients[0].is_playing() or isplaying or bot.voice_clients[0].is_paused():
         await asyncio.sleep(1)
+    isplaying = False
 
 @bot.command(name="standby")
 @commands.check(isUserAdmin)
@@ -354,7 +366,7 @@ async def standby_command(ctx):
     global standby
     if not bot.voice_clients:
         return
-    if bot.voice_clients[0].is_playing():
+    if bot.voice_clients[0].is_playing() or isplaying:
         ctx.send("ich mach grad was, moment")
 
     if standby:
@@ -379,7 +391,7 @@ async def standby_command(ctx):
     global standby
     if not bot.voice_clients:
         return
-    if bot.voice_clients[0].is_playing():
+    if bot.voice_clients[0].is_playing() or isplaying:
         ctx.send("ich mach grad was, moment")
 
     if not standby:
