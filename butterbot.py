@@ -108,7 +108,7 @@ async def soundInteraction():
         await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
         isplaying = True
         bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
-        while bot.voice_clients[0].is_playing() or isplaying or bot.voice_clients[0].is_paused():
+        while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
             await asyncio.sleep(1)
         isplaying = False
     else:
@@ -251,7 +251,7 @@ async def makeSound_command(ctx):
     await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
     isplaying = True
     bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
-    while bot.voice_clients[0].is_playing() or isplaying or bot.voice_clients[0].is_paused():
+    while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
         await asyncio.sleep(1)
     isplaying = False
 
@@ -333,7 +333,7 @@ async def onlysounds_command(ctx):
     await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
     isplaying = True
     bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
-    while bot.voice_clients[0].is_playing() or isplaying or bot.voice_clients[0].is_paused():
+    while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
         await asyncio.sleep(1)
     isplaying = False
 
@@ -356,7 +356,7 @@ async def onlymusic_command(ctx):
     await bot.guilds[0].get_channel(1208189932770959400).send(f"Butter präsentiert: ```{os.path.basename(sound)[:-4]}```")
     isplaying = True
     bot.voice_clients[0].play(discord.FFmpegPCMAudio(sound))
-    while bot.voice_clients[0].is_playing() or isplaying or bot.voice_clients[0].is_paused():
+    while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
         await asyncio.sleep(1)
     isplaying = False
 
