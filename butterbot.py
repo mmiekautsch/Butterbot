@@ -80,11 +80,15 @@ async def channelInteraction():
             print(f"Trete anderem Channel bei: {choice}")
             await bot.voice_clients[0].move_to(choice)
             return
+        else:
+            print("Mache nix, schlecht gewürfelt")
+            return
 
     if random.random() < 0.6:
         choice = random.choice(occupiedChannels)
         print(f"Trete Channel bei: {choice}")
         await bot.voice_clients[0].move_to(choice)
+        await asyncio.sleep(0.5)
         isplaying = True
         bot.voice_clients[0].play(discord.FFmpegPCMAudio(f"{os.getcwd()}\\channel_join.mp3"))
         while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
@@ -176,6 +180,7 @@ async def requestJoin_command(ctx):
         return
 
     await bot.voice_clients[0].move_to(userChannel.channel)
+    await asyncio.sleep(0.5)
     isplaying = True
     bot.voice_clients[0].play(discord.FFmpegPCMAudio(f"{os.getcwd()}\\channel_join.mp3"))
     while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
