@@ -48,6 +48,7 @@ async def on_disconnect():
 
 @tasks.loop(minutes=5)
 async def channelInteraction():
+    global isplaying
     if not bot.voice_clients:
         return
     
@@ -154,6 +155,10 @@ Zeigt diese Hilfe an
 
 @bot.command(name='butter', aliases=['kommher', 'bielebiele'])
 async def requestJoin_command(ctx):
+    global isplaying
+    if not bot.voice_clients:
+        return
+    
     if bot.voice_clients and bot.voice_clients[0].is_playing() or isplaying:
         await ctx.send("Bin beschäftigt")
         return
