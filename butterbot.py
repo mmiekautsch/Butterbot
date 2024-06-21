@@ -69,7 +69,7 @@ async def channelInteraction():
         return
 
     # bot ist schon irgendwo drin
-    if bot.voice_clients[0].channel != bot.guilds[0].get_channel(1136646942101880882): 
+    if bot.voice_clients[0].channel != bot.guilds[0].afk_channel.id: 
         if random.random() < 0.1:
             print("Verlasse Channel")
             await bot.voice_clients[0].move_to(bot.guilds[0].afk_channel)
@@ -84,6 +84,11 @@ async def channelInteraction():
         choice = random.choice(occupiedChannels)
         print(f"Trete Channel bei: {choice}")
         await bot.voice_clients[0].move_to(choice)
+        isplaying = True
+        bot.voice_clients[0].play(discord.FFmpegPCMAudio(f"{os.getcwd()}\\channel_join.mp3"))
+        while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
+            await asyncio.sleep(1)
+        isplaying = False
         return
     
     print("Mache nix, schlecht gewürfelt")
@@ -166,6 +171,11 @@ async def requestJoin_command(ctx):
         return
 
     await bot.voice_clients[0].move_to(userChannel.channel)
+    isplaying = True
+    bot.voice_clients[0].play(discord.FFmpegPCMAudio(f"{os.getcwd()}\\channel_join.mp3"))
+    while bot.voice_clients[0].is_playing() or bot.voice_clients[0].is_paused():
+        await asyncio.sleep(1)
+    isplaying = False
 
     
 @bot.command(name='butterbitte')
