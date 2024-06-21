@@ -48,10 +48,10 @@ async def on_disconnect():
 
 @tasks.loop(minutes=5)
 async def channelInteraction():
-    if bot.voice_clients[0].is_playing() or isplaying:
-        return
-
     if not bot.voice_clients:
+        return
+    
+    if bot.voice_clients[0].is_playing() or isplaying:
         return
     
     # generiere liste aller channels mit leuten drin
