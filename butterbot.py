@@ -205,6 +205,9 @@ def isUserAdmin(ctx) -> bool:
 def isUserAllowed(ctx) -> bool:
     if bot.voice_clients[0].channel == bot.guilds[0].afk_channel:
         return True
+    
+    if bot.voice_clients[0].is_playing() or isplaying:
+        return True
 
     #if ctx.author.id in admin:
     #    return True
