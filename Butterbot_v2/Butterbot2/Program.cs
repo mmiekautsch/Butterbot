@@ -10,19 +10,32 @@ namespace Butterbot2;
 
 public class Program
 {
-    private static DiscordSocketClient client;
-    public static IServiceProvider serviceProvider;
-
     public static async Task Main()
     {
-        client = new();
-
-        serviceProvider = new ServiceCollection()
-            .AddSingleton(client)
-            .AddSingleton(new CommandService())
-            .BuildServiceProvider();
-
-        var handler = new ClientHandler(serviceProvider);
+        await using var services = ConfigureServices();
+        var handler = new ClientHandler(services);
         await Task.Delay(-1);
+    }
+
+    private static ServiceProvider ConfigureServices()
+    {
+        return new ServiceCollection()
+            .AddSingleton(new DiscordSocketConfig
+            {
+                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
+            })
+            .AddSingleton(new CommandServiceConfig {
+                DefaultRunMode = RunMode.Async,
+                LogLevel = LogSeverity.Debug,
+                CaseSensitiveCommands = false,
+            })
+            .AddSingleton<DiscordSocketClient>()
+            .AddSingleton<CommandService>()
+            .AddSingleton<CommandHandlingService>()
+            .AddSingleton<HttpClient>()
+            .AddSingleton<CatService>()
+            .AddSingleton<UserService>()
+            .AddSingleton<SoundService>()
+            .BuildServiceProvider();
     }
 }

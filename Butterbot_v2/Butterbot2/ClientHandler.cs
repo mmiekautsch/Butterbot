@@ -10,18 +10,15 @@ namespace Butterbot2
     public class ClientHandler
     {
         private static readonly ulong butterChannel = 1208189932770959400;
+        private CommandHandlingService commandHandler;
         private readonly DiscordSocketClient client;
-        private System.Timers.Timer timer;
-        private CommandHandler commandHandler;
-
-        public static IServiceProvider services;
+        private static IServiceProvider services;
 
         public ClientHandler(IServiceProvider _services)
         {
             services = _services;
             client = services.GetRequiredService<DiscordSocketClient>();
-            timer = new(5000);
-            commandHandler = new();
+            commandHandler = services.GetRequiredService<CommandHandlingService>();
             InitializeAsync().Wait();
         }
 
@@ -46,20 +43,10 @@ namespace Butterbot2
         {
             client.SetGameAsync("dumme scheiße ab");
             //(client.GetChannel(butterChannel) as IMessageChannel)?.SendMessageAsync("Butter is back online bitches");
-            timer.Start();
+            // connect to butter channel
+            IVoiceChannel? channel = client.GetChannel(butterChannel) as IVoiceChannel;
 
             return Task.CompletedTask;
-        }
-
-        private async void OnTimerElapsed(object? sender, ElapsedEventArgs e)
-        {
-            IVoiceChannel? channel = (client.CurrentUser as IGuildUser)?.VoiceChannel;
-            // bot not connected
-            if (channel == null)
-                return;
-            // bot in afk channel
-            if (channel.Id == 1136646942101880882)
-                return;
         }
     }
 }
