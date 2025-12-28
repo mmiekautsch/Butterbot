@@ -41,7 +41,7 @@ namespace Butterbot2
             if (botChannel != null)
             {
                 await botChannel.DisconnectAsync();
-                await botChannel.ConnectAsync(external: true);
+                await botChannel.ConnectAsync();
             }
         }
     }
@@ -49,6 +49,7 @@ namespace Butterbot2
     public class ButterCommand(IServiceProvider services) : ModuleBase<SocketCommandContext>
     {
         private static readonly ulong butterChannel = 1208189932770959400;
+        private readonly Random random = new();
         private readonly SoundService soundService = services.GetRequiredService<SoundService>();
         private readonly DiscordSocketClient client = services.GetRequiredService<DiscordSocketClient>();
         private readonly UserService userService = services.GetRequiredService<UserService>();
@@ -65,11 +66,11 @@ namespace Butterbot2
                 return;
             }
 
-            //if (userChannel )
-            //{
-            //    await Context.Channel.SendFileAsync("butterdog.jpg");
-            //    return;
-            //}
+            if (userChannel == (Context.Client.CurrentUser as IGuildUser)?.VoiceChannel)
+            {
+                await Context.Channel.SendFileAsync("butterdog.jpg");
+                return;
+            }
 
             soundService.AudioClient = await userChannel.ConnectAsync();
             await soundService.PlayChannelJoinSound();
@@ -94,8 +95,19 @@ namespace Butterbot2
                 await ReplyAsync("Ich bin nicht in einem Voice-Channel.");
                 return;
             }
-            await soundService.PlayRandomSound();
-            await (client.GetChannel(butterChannel) as IMessageChannel).SendMessageAsync($"Butter präsentiert: ```{soundService.CurrentlyPlaying}```");
+            if (soundService.IsPlaying)
+            {
+                await ReplyAsync("Ich spiel grad schon was ab");
+                return;
+            }
+            try
+            {
+                
+                var t = soundService.PlayRandomSound();
+                await (client.GetChannel(butterChannel) as IMessageChannel).SendMessageAsync($"Butter präsentiert: ```{soundService.CurrentlyPlaying}```");
+                t.Wait();
+            }
+            catch (TaskCanceledException) { }
         }
 
         [CheckUserInfo]
@@ -108,11 +120,12 @@ namespace Butterbot2
                 return;
             }
 
-            int botNum = new Random().Next(1, 21);
-            userService.Users.TryGetValue(Context.User.Id, out UserService.Info info);
+            int botNum = random.Next(1, 21);
+            UserService.Info info = userService.GetUser(Context.User.Id);
             if (userNum == botNum)
             {
                 info.LastSoundCommand = DateTime.MinValue;
+                info.FailedOtzAttempts = 0;
                 if (DateTime.Now - info.LastSoundCommand < userService.SoundCommandCooldown)
                 {
                     await ReplyAsync("Gewinne Gewinne Gewinne! Du hattest nicht mal cooldown, Macher");
@@ -127,6 +140,27 @@ namespace Butterbot2
                 info.FailedOtzAttempts++;
                 info.LastFailedOtzAttempt = DateTime.Now;
                 await ReplyAsync($"Es war {botNum} lol. Womp Womp :(");
+            }
+        }
+
+        [Command("butterbitte")]
+        public async Task TryStopSound()
+        {
+            if (soundService.IsPlaying)
+            {
+                if (random.NextDouble() < 0.35 || true)
+                {
+                    soundService.StopSound();
+                    await ReplyAsync("Butter erhört dein Leiden.");
+                }
+                else
+                {
+                    await ReplyAsync("Frag doch einfach noch mal :)");
+                }
+            }
+            else
+            {
+                await ReplyAsync("Es läuft kein sound was willst du von mir");
             }
         }
     }

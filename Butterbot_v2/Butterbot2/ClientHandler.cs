@@ -3,14 +3,13 @@ using Discord.Audio;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
-using System.Timers;
 
 namespace Butterbot2
 {
     public class ClientHandler
     {
         private static readonly ulong butterChannel = 1208189932770959400;
-        private CommandHandlingService commandHandler;
+        private readonly CommandHandlingService commandHandler;
         private readonly DiscordSocketClient client;
         private static IServiceProvider services;
 
@@ -26,7 +25,6 @@ namespace Butterbot2
         {
             client.Log += Log;
             client.Ready += OnReady;
-            //timer.Elapsed += OnTimerElapsed;
             await commandHandler.InstallCommandsAsync();
             await client.LoginAsync(TokenType.Bot, File.ReadAllText("token.txt"));
             await client.StartAsync();
@@ -45,6 +43,7 @@ namespace Butterbot2
             //(client.GetChannel(butterChannel) as IMessageChannel)?.SendMessageAsync("Butter is back online bitches");
             // connect to butter channel
             IVoiceChannel? channel = client.GetChannel(butterChannel) as IVoiceChannel;
+            channel?.ConnectAsync();
 
             return Task.CompletedTask;
         }

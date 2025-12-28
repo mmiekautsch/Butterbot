@@ -13,10 +13,13 @@ namespace Butterbot2
         private readonly DiscordSocketClient client;
         private readonly IServiceProvider services;
         private CancellationTokenSource stopper;
+        private static readonly Random random = new();
 
         public string CurrentlyPlaying { get; private set; } = string.Empty;
 
         public IAudioClient? AudioClient { get; set; }
+
+        public bool IsPlaying { get; private set; } = false;
 
         public SoundService(IServiceProvider _services)
         {
@@ -25,8 +28,13 @@ namespace Butterbot2
             stopper = new CancellationTokenSource();
         }
 
-        private static Process CreateStream(string path)
+        private Process CreateStream(string path)
         {
+            if (stopper.IsCancellationRequested)
+            {
+                stopper.Dispose();
+                stopper = new CancellationTokenSource();
+            }
             return Process.Start(new ProcessStartInfo
             {
                 FileName = "ffmpeg",
@@ -40,7 +48,7 @@ namespace Butterbot2
         private static string GetRandomSound()
         {
             string[] sounds = Directory.GetFiles("C:\\Users\\dasmo\\Documents\\Butterbot\\sounds", "*.mp3");
-            return sounds[new Random().Next(sounds.Length)];
+            return sounds[random.Next(sounds.Length)];
         }
 
         public async Task PlayRandomSound()
@@ -50,11 +58,18 @@ namespace Butterbot2
             string path = GetRandomSound();
             CurrentlyPlaying = Path.GetFileNameWithoutExtension(path);
 
-            using var ffmpeg = CreateStream(path);
-            using var output = ffmpeg.StandardOutput.BaseStream;
-            using var discord = AudioClient.CreatePCMStream(AudioApplication.Mixed);
-            await output.CopyToAsync(discord, stopper.Token);
-            await discord.FlushAsync();
+            IsPlaying = true;
+            try 
+            { 
+                using var ffmpeg = CreateStream(path);
+                using var output = ffmpeg.StandardOutput.BaseStream;
+                using var discord = AudioClient.CreatePCMStream(AudioApplication.Music/*, bufferMillis: 500*/);
+                try { await output.CopyToAsync(discord, stopper.Token); }
+                finally { await discord.FlushAsync(); }
+            }
+            catch (TaskCanceledException) { }
+
+            IsPlaying = false;
         }
 
         public async Task PlayChannelJoinSound()
@@ -64,8 +79,18 @@ namespace Butterbot2
             using var ffmpeg = CreateStream(Directory.GetCurrentDirectory() + "\\res\\channel_join.mp3");
             using var output = ffmpeg.StandardOutput.BaseStream;
             using var discord = AudioClient.CreatePCMStream(AudioApplication.Mixed);
-            try { await output.CopyToAsync(discord, stopper.Token); }
+            try { await output.CopyToAsync(discord); }
             finally { await discord.FlushAsync(); }
+        }
+
+        public void StopSound()
+        {
+            if (IsPlaying)
+            {
+                stopper.Cancel();
+                CurrentlyPlaying = string.Empty;
+                IsPlaying = false;
+            }
         }
     }
 }

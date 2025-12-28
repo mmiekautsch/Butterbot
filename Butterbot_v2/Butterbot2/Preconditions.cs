@@ -26,12 +26,7 @@ namespace Butterbot2
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
             UserService userService = services.GetRequiredService<UserService>();
-
-            if (!userService.Users.TryGetValue(context.User.Id, out UserService.Info info))
-            {
-                userService.Users[context.User.Id] = new UserService.Info();
-                return Task.FromResult(PreconditionResult.FromSuccess());
-            }
+            UserService.Info info = userService.GetUser(context.User.Id);
 
             switch (command.Name)
             {
@@ -50,7 +45,7 @@ namespace Butterbot2
                         else
                         {
                             TimeSpan timeLeft = userService.OtzCooldown - (DateTime.Now - info.LastFailedOtzAttempt);
-                            return Task.FromResult(PreconditionResult.FromError($"Deine mom is ne otze, otz in {timeLeft.Minutes}min {timeLeft.Seconds} wieder"));
+                            return Task.FromResult(PreconditionResult.FromError($"Deine mom is ne otze, otz in {timeLeft.Minutes}min {timeLeft.Seconds}s wieder"));
                         }
                     }
 

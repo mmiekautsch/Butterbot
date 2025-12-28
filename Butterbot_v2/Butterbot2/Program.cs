@@ -36,6 +36,7 @@ public class Program
             .AddSingleton<CatService>()
             .AddSingleton<UserService>()
             .AddSingleton<SoundService>()
+            .AddSingleton<TimerService>()
             .BuildServiceProvider();
     }
 }

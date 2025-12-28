@@ -8,21 +8,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Discord.Net" Version="3.17.1" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.1" />
+    <PackageReference Include="Discord.Net" Version="3.18.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="libsodium.dll">
+    <None Update="Natives\AudioService\ffmpeg\bin\ffmpeg.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="libsodium.dll">
+    <None Update="Natives\AudioService\ffmpeg\bin\libsodium.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="opus.dll">
+    <None Update="Natives\AudioService\ffmpeg\bin\opus.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="opus.dll">
+    <None Update="Natives\AudioService\yt-dlp.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="res\butterdog.jpg">
@@ -35,6 +35,13 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
+	
+  <Target Name="MoveFiles" AfterTargets="Build">
+    <Copy SourceFiles="Natives\AudioService\ffmpeg\bin\ffmpeg.exe" DestinationFiles="$(OutputPath)ffmpeg.exe" />
+    <Copy SourceFiles="Natives\AudioService\ffmpeg\bin\libsodium.dll" DestinationFiles="$(OutputPath)libsodium.dll" />
+    <Copy SourceFiles="Natives\AudioService\ffmpeg\bin\opus.dll" DestinationFiles="$(OutputPath)opus.dll" />
+	<Copy SourceFiles="Natives\AudioService\yt-dlp.exe" DestinationFiles="$(OutputPath)yt-dlp.exe" />
+	<RemoveDir Directories="$(OutputPath)Natives" />
+  </Target>
 
 </Project>

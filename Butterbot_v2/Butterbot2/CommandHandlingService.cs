@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace Butterbot2
 {
@@ -46,6 +47,18 @@ namespace Butterbot2
                     break;
                 case CommandError.UnmetPrecondition:
                     await context.Channel.SendMessageAsync($"{result.ErrorReason}");
+                    break;
+                case CommandError.Exception:
+                    //ExecuteResult executeResult = (ExecuteResult)result;
+                    //if (executeResult.Exception is TaskCanceledException)
+                    //{
+                    //    break;
+                    //}
+                    //else
+                    //{
+                    //    await context.Channel.SendMessageAsync("Irgendwas is passiert, Olli bescheid sagen (╯°□°）╯︵ ┻━┻");
+                    //    break;
+                    //}
                     break;
                 default:
                     await context.Channel.SendMessageAsync("Irgendwas is passiert, Olli bescheid sagen (╯°□°）╯︵ ┻━┻");
