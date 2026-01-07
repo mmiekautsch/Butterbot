@@ -48,7 +48,6 @@ namespace Butterbot2
 
     public class ButterCommand(IServiceProvider services) : ModuleBase<SocketCommandContext>
     {
-        private static readonly ulong butterChannel = 1208189932770959400;
         private readonly Random random = new();
         private readonly SoundService soundService = services.GetRequiredService<SoundService>();
         private readonly DiscordSocketClient client = services.GetRequiredService<DiscordSocketClient>();
@@ -104,7 +103,6 @@ namespace Butterbot2
             {
                 
                 var t = soundService.PlayRandomSound();
-                await (client.GetChannel(butterChannel) as IMessageChannel).SendMessageAsync($"Butter präsentiert: ```{soundService.CurrentlyPlaying}```");
                 t.Wait();
             }
             catch (TaskCanceledException) { }

@@ -6,7 +6,11 @@ namespace Butterbot2
 {
     public class CheckIfUserIsAdminAttribute : PreconditionAttribute
     {
-        private static readonly ulong[] admins = [202861899098882048, 769230869373124638];
+        private static readonly ulong[] admins =
+        [
+            202861899098882048, // Olli
+            769230869373124638, // Masl
+        ];
 
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
