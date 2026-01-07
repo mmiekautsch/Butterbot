@@ -1,40 +1,38 @@
 ﻿using Discord;
-using Discord.Audio;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using System.Diagnostics;
-
-#pragma warning disable CS8618 // Ein Non-Nullable-Feld muss beim Beenden des Konstruktors einen Wert ungleich NULL enthalten. Fügen Sie ggf. den „erforderlichen“ Modifizierer hinzu, oder deklarieren Sie den Modifizierer als NULL-Werte zulassend.
 
 namespace Butterbot2
 {
-    public class ClientHandler
+    // ClientHandler übernimmt die Initialisierung und das Stoppen des Bots
+    public class ClientHandler(IServiceProvider services) : IHostedService
     {
-        private readonly CommandHandlingService commandHandler;
-        private readonly DiscordSocketClient client;
-        private readonly TimerService timerService;
-        private static IServiceProvider services;
+        private readonly CommandHandlingService commandHandler = services.GetRequiredService<CommandHandlingService>();
+        private readonly DiscordSocketClient client = services.GetRequiredService<DiscordSocketClient>();
+        private readonly TimerService timerService = services.GetRequiredService<TimerService>();
 
-        public ClientHandler(IServiceProvider _services)
-        {
-            services = _services;
-            client = services.GetRequiredService<DiscordSocketClient>();
-            commandHandler = services.GetRequiredService<CommandHandlingService>();
-
-
-            timerService = services.GetRequiredService<TimerService>();
-            InitializeAsync().Wait();
-        }
-
-        public async Task InitializeAsync()
+        public async Task StartAsync(CancellationToken cancellationToken)
         {
             client.Log += Log;
             client.Ready += OnReady;
+        
             await commandHandler.InstallCommandsAsync();
             await client.LoginAsync(TokenType.Bot, File.ReadAllText("token.txt"));
             await client.StartAsync();
+        
             timerService.StartChannelInteractionTimer();
             timerService.StartSoundInteractionTimer();
+        }
+
+        public async Task StopAsync(CancellationToken cancellationToken)
+        {
+            timerService.StopChannelInteractionTimer();
+            timerService.StopSoundInteractionTimer();
+        
+            await client.StopAsync();
+            await client.LogoutAsync();
         }
 
         private Task Log(LogMessage msg)

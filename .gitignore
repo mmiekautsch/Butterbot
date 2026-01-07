@@ -8,7 +8,7 @@ Butterbot_v3/
 token.txt
 
 *.rdp
-Lavalink.jar
+Lavalink/
 *.pem
 
 ## Ignore Visual Studio temporary files, build results, and

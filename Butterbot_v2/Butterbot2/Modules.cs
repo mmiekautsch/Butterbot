@@ -71,8 +71,8 @@ namespace Butterbot2
                 return;
             }
 
-            soundService.AudioClient = await userChannel.ConnectAsync();
-            await soundService.PlayChannelJoinSound();
+            await userChannel.ConnectAsync();
+            await soundService.PlayChannelJoinSound(userChannel.Id);
         }
 
         [CheckUserInfo]
@@ -89,7 +89,8 @@ namespace Butterbot2
         [Command("machwas")]
         public async Task PlaySound()
         {
-            if (soundService.AudioClient == null)
+            var botChannel = (client.CurrentUser as IGuildUser)?.VoiceChannel;
+            if (botChannel == null)
             {
                 await ReplyAsync("Ich bin nicht in einem Voice-Channel.");
                 return;
@@ -101,9 +102,7 @@ namespace Butterbot2
             }
             try
             {
-                
-                var t = soundService.PlayRandomSound();
-                t.Wait();
+                await soundService.PlayRandomSound(botChannel.Id);
             }
             catch (TaskCanceledException) { }
         }
@@ -148,8 +147,8 @@ namespace Butterbot2
             {
                 if (random.NextDouble() < 0.35 || true)
                 {
-                    soundService.StopSound();
                     await ReplyAsync("Butter erhört dein Leiden.");
+                    await soundService.StopSoundAsync();
                 }
                 else
                 {

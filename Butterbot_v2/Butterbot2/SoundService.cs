@@ -1,48 +1,30 @@
 ﻿using Discord;
-using Discord.Audio;
 using Discord.WebSocket;
+using Lavalink4NET;
+using Lavalink4NET.DiscordNet;
+using Lavalink4NET.Extensions;
+using Lavalink4NET.Players;
+using Lavalink4NET.Rest.Entities.Tracks;
 using Microsoft.Extensions.DependencyInjection;
-using System.Diagnostics;
-
-#pragma warning disable CS8603 // Mögliche Nullverweisrückgabe.
 
 namespace Butterbot2
 {
-    public class SoundService
+    public class SoundService(IServiceProvider services)
     {
-        private readonly DiscordSocketClient client;
-        private readonly IServiceProvider services;
-        private CancellationTokenSource stopper;
+        private readonly DiscordSocketClient client = services.GetRequiredService<DiscordSocketClient>();
+        private readonly IAudioService audioService = services.GetRequiredService<IAudioService>();
+
         private static readonly Random random = new();
+        private static readonly ulong butterChannel = 1208189932770959400;
+        private LavalinkPlayer? player;
 
+        private ulong GuildId => client.Guilds.First().Id;
         public string CurrentlyPlaying { get; private set; } = string.Empty;
+        public bool IsPlaying => player?.State == PlayerState.Playing;
 
-        public IAudioClient? AudioClient { get; set; }
-
-        public bool IsPlaying { get; private set; } = false;
-
-        public SoundService(IServiceProvider _services)
+        private async Task<LavalinkPlayer?> GetCurrentPlayerAsync()
         {
-            services = _services;
-            client = services.GetRequiredService<DiscordSocketClient>();
-            stopper = new CancellationTokenSource();
-        }
-
-        private Process CreateStream(string path)
-        {
-            if (stopper.IsCancellationRequested)
-            {
-                stopper.Dispose();
-                stopper = new CancellationTokenSource();
-            }
-            return Process.Start(new ProcessStartInfo
-            {
-                FileName = "ffmpeg",
-                Arguments = $"-hide_banner -loglevel panic -i \"{path}\" -ac 2 -f s16le -ar 48000 pipe:1",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true
-            });
+            return await audioService.Players.GetPlayerAsync<LavalinkPlayer>(GuildId);
         }
 
         private static string GetRandomSound()
@@ -51,45 +33,91 @@ namespace Butterbot2
             return sounds[random.Next(sounds.Length)];
         }
 
-        public async Task PlayRandomSound()
+        private async Task<LavalinkPlayer> GetOrJoinPlayerAsync(ulong voiceChannelId)
         {
-            if (AudioClient == null) return;
+            var existingPlayer = await GetCurrentPlayerAsync();
 
-            string path = GetRandomSound();
-            CurrentlyPlaying = Path.GetFileNameWithoutExtension(path);
-
-            IsPlaying = true;
-            try 
-            { 
-                using var ffmpeg = CreateStream(path);
-                using var output = ffmpeg.StandardOutput.BaseStream;
-                using var discord = AudioClient.CreatePCMStream(AudioApplication.Music/*, bufferMillis: 500*/);
-                try { await output.CopyToAsync(discord, stopper.Token); }
-                finally { await discord.FlushAsync(); }
-            }
-            catch (TaskCanceledException) { }
-
-            IsPlaying = false;
-        }
-
-        public async Task PlayChannelJoinSound()
-        {
-            if (AudioClient == null) return;
-
-            using var ffmpeg = CreateStream(Directory.GetCurrentDirectory() + "\\res\\channel_join.mp3");
-            using var output = ffmpeg.StandardOutput.BaseStream;
-            using var discord = AudioClient.CreatePCMStream(AudioApplication.Mixed);
-            try { await output.CopyToAsync(discord); }
-            finally { await discord.FlushAsync(); }
-        }
-
-        public void StopSound()
-        {
-            if (IsPlaying)
+            if (existingPlayer is not null)
             {
-                stopper.Cancel();
+                player = existingPlayer;
+                if (existingPlayer.VoiceChannelId != voiceChannelId)
+                {
+                    // Verschiebe Player zum neuen Channel
+                    await existingPlayer.DisconnectAsync();
+                    return await JoinChannelAsync(voiceChannelId);
+                }
+
+                return existingPlayer;
+            }
+
+            // Kein Player existiert, erstelle neuen
+            return await JoinChannelAsync(voiceChannelId);
+        }
+
+        private async Task<LavalinkPlayer> JoinChannelAsync(ulong voiceChannelId)
+        {
+            player = await audioService.Players.JoinAsync(
+                GuildId,
+                voiceChannelId,
+                playerFactory: PlayerFactory.Default,
+                options: new LavalinkPlayerOptions(),
+                cancellationToken: default);
+            
+            return player;
+        }
+
+        public async Task PlayRandomSound(ulong voiceChannelId)
+        {
+            var soundPath = GetRandomSound();
+            var fileName = Path.GetFileName(soundPath);
+
+            var track = await audioService.Tracks.LoadTrackAsync(soundPath, TrackSearchMode.None);
+
+            if (track is null)
+            {
+                throw new InvalidOperationException($"Track konnte nicht geladen werden: {soundPath}");
+            }
+
+            var currentPlayer = await GetOrJoinPlayerAsync(voiceChannelId);
+
+            CurrentlyPlaying = fileName;
+            await (client.GetChannel(butterChannel) as IMessageChannel)!.SendMessageAsync($"Butter präsentiert: ```{CurrentlyPlaying}```");
+            await currentPlayer.PlayAsync(track);
+        }
+
+        public async Task PlayChannelJoinSound(ulong voiceChannelId)
+        {
+            var joinSoundPath = Path.Combine(Directory.GetCurrentDirectory(), "res", "channel_join.mp3");
+
+            var track = await audioService.Tracks.LoadTrackAsync(joinSoundPath, TrackSearchMode.None);
+
+            if (track is null)
+            {
+                throw new InvalidOperationException("Channel join sound konnte nicht geladen werden");
+            }
+
+            var currentPlayer = await GetOrJoinPlayerAsync(voiceChannelId);
+
+            CurrentlyPlaying = "channel_join.mp3";
+            await currentPlayer.PlayAsync(track);
+        }
+
+        public async Task StopSoundAsync()
+        {
+            if (player is not null)
+            {
+                await player.StopAsync();
                 CurrentlyPlaying = string.Empty;
-                IsPlaying = false;
+            }
+        }
+
+        public async Task DisconnectAsync()
+        {
+            if (player is not null)
+            {
+                await player.DisconnectAsync();
+                player = null;
+                CurrentlyPlaying = string.Empty;
             }
         }
     }
