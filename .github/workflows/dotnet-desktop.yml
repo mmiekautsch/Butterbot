@@ -14,7 +14,6 @@ jobs:
     runs-on: windows-latest
 
     env:
-      Solution_Name: Butterbot_v2\*.sln
       Configuration: Release
       
     steps: 
@@ -23,32 +22,33 @@ jobs:
       with:
         fetch-depth: 0
 
-    # Install the .NET SDK
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
 
-    # Add MSBuild to the PATH
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
 
-    # Restore NuGet packages
+    - name: Find Solution
+      id: find-sln
+      run: |
+        $sln = Get-ChildItem -Path Butterbot_v2 -Filter *.sln -Recurse | Select-Object -First 1
+        echo "solution_path=$($sln.FullName)" >> $env:GITHUB_OUTPUT
+      shell: pwsh
+
     - name: Restore dependencies
-      run: dotnet restore $env:Solution_Name
+      run: dotnet restore "${{ steps.find-sln.outputs.solution_path }}"
 
-    # Build the solution
     - name: Build
-      run: dotnet build $env:Solution_Name --configuration $env:Configuration --no-restore
+      run: dotnet build "${{ steps.find-sln.outputs.solution_path }}" --configuration $env:Configuration --no-restore
 
-    # Upload build artifacts
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: butterbot-release
         path: Butterbot_v2\*\bin\Release\**
 
-    # Create Release (only on push to main, not on PRs)
     - name: Create Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v1
