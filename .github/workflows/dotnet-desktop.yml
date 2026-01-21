@@ -43,21 +43,37 @@ jobs:
     - name: Build
       run: dotnet build "${{ steps.find-sln.outputs.solution_path }}" --configuration $env:Configuration --no-restore
 
+    - name: Package Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        New-Item -ItemType Directory -Force -Path release-package
+        Get-ChildItem -Path Butterbot_v2 -Filter bin -Recurse -Directory | ForEach-Object {
+          $releasePath = Join-Path $_.FullName "Release"
+          if (Test-Path $releasePath) {
+            Get-ChildItem -Path $releasePath -Recurse -File | ForEach-Object {
+              $destPath = Join-Path "release-package" $_.Name
+              Copy-Item $_.FullName -Destination $destPath -Force
+            }
+          }
+        }
+        Compress-Archive -Path release-package\* -DestinationPath Butterbot-Release.zip
+      shell: pwsh
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
-      with:
+      with: 
         name: butterbot-release
-        path: Butterbot_v2\*\bin\Release\**
+        path: release-package\**
 
     - name: Create Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v1
-      with: 
+      with:  
         tag_name: v${{ github.run_number }}
         name: Release v${{ github.run_number }}
         draft: false
         prerelease: false
-        files: Butterbot_v2\*\bin\Release\**\*
+        files: Butterbot-Release.zip
         generate_release_notes: true
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets. GITHUB_TOKEN }}
